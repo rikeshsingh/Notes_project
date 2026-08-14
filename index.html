@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Note and Interview Prep</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-grid">
+    <aside class="sidebar">
+      <div class="profile">
+        <div class="avatar">RS</div>
+        <div class="profile-name">Rakesh Singh</div>
+      </div>
+      <div class="sidebar-sections">
+        <h4 class="sidebar-title">Categories</h4>
+        <ul class="categories">
+          <li><button class="cat-btn" data-cat="Docker">Docker <span class="count">3</span></button></li>
+          <li><button class="cat-btn" data-cat="Kubernetes">Kubernetes <span class="count">3</span></button></li>
+          <li><button class="cat-btn active" data-cat="SRE">SRE Engineering <span class="count">4</span></button></li>
+          <li><button class="cat-btn" data-cat="Terraform">Terraform <span class="count">3</span></button></li>
+        </ul>
+      </div>
+      <div class="sidebar-footer">
+        <button class="theme-toggle" aria-pressed="false" title="Toggle theme">🌙</button>
+      </div>
+    </aside>
+
+    <section class="notes-list">
+      <div class="list-header">
+        <input id="search" placeholder="Search notes..." />
+        <button id="add-note" class="btn">+ Add Note</button>
+      </div>
+      <div id="notes-list" class="list"></div>
+    </section>
+
+    <main class="note-content">
+      <div class="content-header">
+        <div class="tag-dot"></div>
+        <select id="category-select" class="category-select"></select>
+        <div style="margin-left:auto;display:flex;gap:8px" class="note-actions">
+          <button id="modify-note-btn" class="btn">Modify</button>
+          <button id="delete-note-btn" class="btn secondary">Delete</button>
+        </div>
+      </div>
+      <article class="note-article">
+        <h2 id="note-title">Select a note</h2>
+        <div id="content">Pick a note from the middle column to view the answer.</div>
+      </article>
+    </main>
+  </div>
+
+  <footer>
+    <small>Use the buttons above to explore categories. Built with HTML/CSS/JS.</small>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
