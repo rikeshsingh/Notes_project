@@ -73,11 +73,32 @@
 
   // If user already signed in, redirect to app
   auth.onAuthStateChanged(u=>{
+    const signoutBtn = document.getElementById('btn-signout')
     if(u){
       // already signed in
       if(window.location.pathname === '/' || window.location.pathname.endsWith('login.html')){
         window.location.href = '/index.html'
+        return
       }
+      // show sign out button if present
+      if(signoutBtn){ signoutBtn.style.display = 'inline-block' }
+    } else {
+      // not signed in -> send to login
+      if(!location.pathname.endsWith('login.html')) location.replace('/login.html')
+      if(signoutBtn) signoutBtn.style.display = 'none'
     }
   })
+
+  // bind sign-out action if button exists (works on index.html)
+  const signoutBtnGlobal = document.getElementById('btn-signout')
+  if(signoutBtnGlobal){
+    signoutBtnGlobal.addEventListener('click', ()=>{
+      showMsg('Signing out...')
+      auth.signOut().then(()=>{
+        window.location.href = '/login.html'
+      }).catch(err=>{
+        showMsg(err.message || String(err))
+      })
+    })
+  }
 })();
