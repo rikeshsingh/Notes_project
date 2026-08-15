@@ -7,30 +7,40 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <main>
-    <section class="auth-card">
-      <h1>Sign in to Notes</h1>
-      <p>Create an account or sign in to access shared notes.</p>
+  <div class="auth-hero">
+    <div class="auth-panel">
+      <h1>Login</h1>
+      <div class="auth-sub">Sign in to continue to Notes</div>
 
-      <div>
-        <input id="displayName" class="auth-input" placeholder="Full name (for profile)">
-        <input id="email" class="auth-input" placeholder="Email">
-        <input id="password" class="auth-input" type="password" placeholder="Password">
-
-        <div class="auth-row" style="margin-top:8px">
-          <button id="btn-signup" class="auth-btn">Create account</button>
-          <button id="btn-signin" class="auth-btn secondary">Sign in</button>
-        </div>
-
-        <div style="margin-top:16px;color:var(--muted);font-size:14px">Or sign in with Google</div>
-        <div style="margin-top:8px">
-          <button id="btn-google" class="auth-btn auth-google">Sign in with Google</button>
-        </div>
-
-        <div id="auth-msg" class="auth-msg"></div>
+      <div class="input-row">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 12c2.761 0 5-2.239 5-5s-2.239-5-5-5-5 2.239-5 5 2.239 5 5 5z" stroke="#9CA3AF" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <input id="displayName" placeholder="Type your username">
       </div>
-    </section>
-  </main>
+
+      <div class="input-row">
+        <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M3 8l9 6 9-6" stroke="#9CA3AF" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <input id="email" placeholder="Type your email">
+      </div>
+
+      <div class="input-row">
+        <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M12 17v-4" stroke="#9CA3AF" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 9a3 3 0 016 0v2" stroke="#9CA3AF" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <input id="password" type="password" placeholder="Type your password">
+      </div>
+
+      <button id="btn-signin" class="btn-gradient">LOGIN</button>
+
+      <div class="social-label">Or Sign Up Using</div>
+      <div class="social-row">
+        <div id="social-fb" class="social-btn fb">f</div>
+        <div id="social-tw" class="social-btn tw">t</div>
+        <div id="btn-google" class="social-btn gg">G</div>
+      </div>
+
+      <div class="auth-footer">Or Sign Up Using <a href="#" id="btn-signup">SIGN UP</a></div>
+
+      <div id="auth-msg" class="auth-msg"></div>
+    </div>
+  </div>
 
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
