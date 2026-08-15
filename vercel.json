@@ -5,6 +5,7 @@
   ],
   "routes": [
     { "handle": "filesystem" },
+    { "src": "/", "dest": "/login.html" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }

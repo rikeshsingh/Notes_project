@@ -276,7 +276,29 @@ function populateCategorySelect(){
 // Search filter
 document.addEventListener('DOMContentLoaded', ()=>{
   loadData()
-  initFirestore()
+  // ensure auth ready: if Firebase auth exists, wait for auth state check
+  try{
+    if(window.FIREBASE_CONFIG && typeof firebase !== 'undefined' && firebase.auth){
+      firebase.initializeApp && firebase.initializeApp(window.FIREBASE_CONFIG)
+      // when auth ready, enforce redirect to login if not signed in
+      firebase.auth().onAuthStateChanged(user=>{
+        if(!user){
+          // not signed in -> send to login
+          if(!location.pathname.endsWith('login.html')) location.replace('/login.html')
+        } else {
+          // signed in -> set user name and continue
+          const nameEl = document.getElementById('user-name')
+          if(nameEl) nameEl.textContent = user.displayName || user.email || 'User'
+          initFirestore()
+        }
+      })
+    } else {
+      initFirestore()
+    }
+  }catch(e){
+    console.warn('Auth/init check failed', e)
+    initFirestore()
+  }
   // if Firestore not configured, fall back to server
   if(!useFirestore) fetchRemoteData()
   initThemeToggle()

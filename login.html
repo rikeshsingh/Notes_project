@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Notes — Sign in</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main style="max-width:520px;margin:48px auto;padding:24px">
+    <h1 style="margin-bottom:6px">Sign in to Notes</h1>
+    <p style="color:var(--muted);margin-bottom:18px">Create an account or sign in to access shared notes.</p>
+
+    <div style="display:grid;gap:10px">
+      <input id="displayName" placeholder="Full name (for profile)" style="padding:10px;border-radius:8px;border:1px solid rgba(15,23,36,0.06)">
+      <input id="email" placeholder="Email" style="padding:10px;border-radius:8px;border:1px solid rgba(15,23,36,0.06)">
+      <input id="password" type="password" placeholder="Password" style="padding:10px;border-radius:8px;border:1px solid rgba(15,23,36,0.06)">
+      <div style="display:flex;gap:8px">
+        <button id="btn-signup" class="btn">Create account</button>
+        <button id="btn-signin" class="btn secondary">Sign in</button>
+      </div>
+      <div style="margin-top:12px;color:var(--muted);font-size:14px">Or sign in with Google</div>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <button id="btn-google" class="btn">Sign in with Google</button>
+      </div>
+      <div id="auth-msg" style="color:#e74c3c;margin-top:8px"></div>
+    </div>
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="firebase-auth.js"></script>
+</body>
+</html>
