@@ -35,6 +35,13 @@ nav{display:flex;gap:8px;padding:12px 20px;background:transparent}
 .note-content{background:var(--surface);border-radius:12px;padding:18px;border:1px solid rgba(15,23,36,0.04);min-height:60vh}
 .content-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
 .tag-dot{width:12px;height:12px;border-radius:50%;background:var(--accent)}
+/* Sync status indicator */
+.sync-status{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.02);font-size:13px;color:var(--muted)}
+.sync-status .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.sync-status .dot.connected{background:#27ae60}
+.sync-status .dot.connecting{background:#f0ad4e}
+.sync-status .dot.disconnected{background:#e74c3c}
+.sync-status .dot.disabled{background:rgba(255,255,255,0.06)}
 .note-article{padding:6px}
 .note-article h2{margin:0 0 12px 0}
 .note-article #content{color:var(--muted);line-height:1.6}

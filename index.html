@@ -38,6 +38,10 @@
     <main class="note-content">
       <div class="content-header">
         <div class="tag-dot"></div>
+        <div id="sync-status" class="sync-status">
+          <span class="dot disabled"></span>
+          <span class="label">Realtime: disabled</span>
+        </div>
         <select id="category-select" class="category-select"></select>
         <div style="margin-left:auto;display:flex;gap:8px" class="note-actions">
           <button id="modify-note-btn" class="btn">Modify</button>
@@ -55,6 +59,9 @@
     <small>Use the buttons above to explore categories. Built with HTML/CSS/JS.</small>
   </footer>
 
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
