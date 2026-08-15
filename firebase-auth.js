@@ -11,6 +11,42 @@
   const auth = firebase.auth()
   const db = firebase.firestore()
 
+  // Update user metadata: last login, locale, and (optionally) geolocation/ip
+  function updateUserMetadata(user){
+    if(!user) return Promise.resolve()
+    const docRef = db.collection('users').doc(user.uid)
+    const info = { lastLoginAt: firebase.firestore.FieldValue.serverTimestamp(), locale: (navigator.language || null) }
+    return new Promise((resolve)=>{
+      // Try browser geolocation first (prompt may appear). If it fails, fall back to IP lookup.
+      if(navigator && navigator.geolocation){
+        navigator.geolocation.getCurrentPosition(async (pos)=>{
+          info.geo = {lat: pos.coords.latitude, lng: pos.coords.longitude}
+          docRef.set(info, {merge:true}).then(()=>resolve()).catch(()=>resolve())
+        }, async ()=>{
+          try{
+            const resp = await fetch('https://ipapi.co/json/')
+            const j = await resp.json()
+            info.ip = j.ip
+            info.city = j.city
+            info.region = j.region
+            info.country = j.country_name
+          }catch(e){}
+          docRef.set(info, {merge:true}).then(()=>resolve()).catch(()=>resolve())
+        }, {timeout:5000})
+      } else {
+        // No geolocation available, try IP lookup
+        fetch('https://ipapi.co/json/').then(r=>r.json()).then(j=>{
+          info.ip = j.ip
+          info.city = j.city
+          info.region = j.region
+          info.country = j.country_name
+        }).catch(()=>{}).finally(()=>{
+          docRef.set(info, {merge:true}).then(()=>resolve()).catch(()=>resolve())
+        })
+      }
+    })
+  }
+
   // Sign up
   const btnSignup = $('btn-signup')
   const btnSignin = $('btn-signin')
@@ -35,7 +71,7 @@
           displayName: user.displayName || '',
           email: user.email || '',
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        })
+        }).then(()=> updateUserMetadata(user))
       }).then(()=>{
         showMsg('Account created. Redirecting...')
         window.location.href = '/index.html'
@@ -51,7 +87,10 @@
       const pass = $('password').value
       if(!email || !pass){ showMsg('Enter email and password'); return }
       showMsg('Signing in...')
-      auth.signInWithEmailAndPassword(email, pass).then(()=>{
+      auth.signInWithEmailAndPassword(email, pass).then((cred)=>{
+        const user = cred.user || auth.currentUser
+        return updateUserMetadata(user)
+      }).then(()=>{
         showMsg('Signed in. Redirecting...')
         window.location.href = '/index.html'
       }).catch(err=> showMsg(err.message || String(err)))
@@ -66,7 +105,7 @@
         // ensure user doc
         return db.collection('users').doc(u.uid).set({
           uid:u.uid, displayName: u.displayName||'', email:u.email||'', createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, {merge:true})
+        }, {merge:true}).then(()=> updateUserMetadata(u))
       }).then(()=> window.location.href = '/index.html').catch(err=> showMsg(err.message||String(err)))
     })
   }
