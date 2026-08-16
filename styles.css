@@ -159,8 +159,6 @@ footer{padding:12px 20px;color:var(--muted);font-size:13px}
 .btn-gradient{display:inline-block;width:100%;padding:12px;border-radius:30px;border:none;background:linear-gradient(90deg,#34d399,#60a5fa);color:white;font-weight:700;cursor:pointer;box-shadow:0 8px 20px rgba(45,130,255,0.18)}
 .social-row{display:flex;gap:12px;justify-content:center;margin-top:18px}
 .social-btn{width:44px;height:44px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:white;cursor:pointer}
-.social-btn.fb{background:#1877f2}
-.social-btn.tw{background:#1da1f2}
 .social-btn.gg{background:#ea4335}
 .social-label{display:block;text-align:center;margin-top:12px;color:#9ca3af;font-size:13px}
 .auth-footer{margin-top:18px;text-align:center;color:#9ca3af}
