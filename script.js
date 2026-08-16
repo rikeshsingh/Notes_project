@@ -247,11 +247,46 @@ function showNote(idx){
   const content = document.getElementById('content')
   if(note){
     title.textContent = note.q
-    content.textContent = note.a
+    // Render note content safely, preserving line breaks and embedded image tokens
+    renderContentToElement(note.a, content)
   } else {
     title.textContent = 'Select a note'
     content.textContent = 'Pick a note from the middle column to view the answer.'
   }
+}
+
+// Render text to an element, converting [[IMG:dataURL]] tokens to image elements
+function renderContentToElement(text, container){
+  container.innerHTML = ''
+  if(!text){ container.textContent = ''; return }
+  const tokenRe = /\[\[IMG:([^\]]+)\]\]/g
+  let lastIndex = 0
+  let m
+  while((m = tokenRe.exec(text)) !== null){
+    const before = text.substring(lastIndex, m.index)
+    appendTextWithLineBreaks(container, before)
+    const dataUrl = m[1]
+    try{
+      const img = document.createElement('img')
+      img.src = dataUrl
+      img.className = 'note-embedded-img'
+      container.appendChild(img)
+    }catch(e){
+      // ignore broken image
+    }
+    lastIndex = tokenRe.lastIndex
+  }
+  const rest = text.substring(lastIndex)
+  appendTextWithLineBreaks(container, rest)
+}
+
+function appendTextWithLineBreaks(container, text){
+  if(!text) return
+  const lines = text.split('\n')
+  lines.forEach((line, i)=>{
+    container.appendChild(document.createTextNode(line))
+    if(i < lines.length - 1) container.appendChild(document.createElement('br'))
+  })
 }
 
 function populateCategorySelect(){
@@ -360,8 +395,13 @@ function enterEditMode(idx, isNew=false){
   const contentEl = document.getElementById('content')
   // Create editable inputs
   titleEl.innerHTML = `<input id="edit-title" value="${note ? escapeHtml(note.q) : ''}" style="width:100%;padding:8px;border-radius:6px;border:1px solid rgba(15,23,36,0.06);font-size:18px">`
-  contentEl.innerHTML = `<textarea id="edit-body" style="width:100%;height:280px;padding:10px;border-radius:6px;border:1px solid rgba(15,23,36,0.06);">${note ? escapeHtml(note.a) : ''}</textarea>
-    <div style="margin-top:10px;display:flex;gap:8px"><button id="save-note" class="btn">Save</button><button id="cancel-note" class="btn secondary">Cancel</button></div>`
+  contentEl.innerHTML = `<textarea id="edit-body" style="width:100%;height:220px;padding:10px;border-radius:6px;border:1px solid rgba(15,23,36,0.06);">${note ? escapeHtml(note.a) : ''}</textarea>
+    <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+      <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer"><input id="attach-image" type="file" accept="image/*" style="display:none">Attach Image</label>
+      <button id="save-note" class="btn">Save</button>
+      <button id="cancel-note" class="btn secondary">Cancel</button>
+    </div>
+    <div id="edit-image-preview" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"></div>`
 
   document.getElementById('save-note').addEventListener('click', ()=>{
     const newQ = document.getElementById('edit-title').value.trim() || 'Untitled'
@@ -373,6 +413,46 @@ function enterEditMode(idx, isNew=false){
     saveData()
     saveToFirestore()
   })
+
+  // Attach image handler: inserts token [[IMG:dataUrl]] into textarea and shows preview
+  const attachInput = document.getElementById('attach-image')
+  const editBody = document.getElementById('edit-body')
+  const preview = document.getElementById('edit-image-preview')
+  function refreshPreview(){
+    preview.innerHTML = ''
+    const tokenRe = /\[\[IMG:([^\]]+)\]\]/g
+    let m
+    while((m = tokenRe.exec(editBody.value)) !== null){
+      const img = document.createElement('img')
+      img.src = m[1]
+      img.style.maxWidth = '120px'
+      img.style.maxHeight = '90px'
+      img.style.objectFit = 'cover'
+      img.style.borderRadius = '6px'
+      preview.appendChild(img)
+    }
+  }
+  if(attachInput){
+    attachInput.addEventListener('change', (ev)=>{
+      const f = ev.target.files && ev.target.files[0]
+      if(!f) return
+      const reader = new FileReader()
+      reader.onload = function(e){
+        const dataUrl = e.target.result
+        // insert token at cursor position
+        const start = editBody.selectionStart || editBody.value.length
+        const before = editBody.value.substring(0, start)
+        const after = editBody.value.substring(start)
+        editBody.value = before + "\n[[IMG:" + dataUrl + "]]\n" + after
+        refreshPreview()
+      }
+      reader.readAsDataURL(f)
+      // reset input so same file can be attached again if needed
+      attachInput.value = ''
+    })
+    // refresh preview on load
+    refreshPreview()
+  }
 
   document.getElementById('cancel-note').addEventListener('click', ()=>{
     // If it was a new note and user cancels, remove it
