@@ -289,6 +289,16 @@ function appendTextWithLineBreaks(container, text){
   })
 }
 
+// Convert a File/Blob to a Data URL
+function fileToDataUrl(file){
+  return new Promise((resolve, reject)=>{
+    const r = new FileReader()
+    r.onload = ()=>resolve(r.result)
+    r.onerror = (e)=>reject(e)
+    r.readAsDataURL(file)
+  })
+}
+
 function populateCategorySelect(){
   const sel = document.getElementById('category-select')
   sel.innerHTML = ''
@@ -452,6 +462,66 @@ function enterEditMode(idx, isNew=false){
     })
     // refresh preview on load
     refreshPreview()
+  }
+
+  // Paste handler: allow pasting images from clipboard into the textarea
+  if(editBody){
+    editBody.addEventListener('paste', async (ev)=>{
+      try{
+        const items = (ev.clipboardData && ev.clipboardData.items) || []
+        for(let i=0;i<items.length;i++){
+          const it = items[i]
+          if(it.type && it.type.indexOf('image') === 0){
+            ev.preventDefault()
+            const file = it.getAsFile()
+            if(file){
+              const dataUrl = await fileToDataUrl(file)
+              const start = editBody.selectionStart || editBody.value.length
+              const before = editBody.value.substring(0, start)
+              const after = editBody.value.substring(start)
+              editBody.value = before + "\n[[IMG:" + dataUrl + "]]\n" + after
+              refreshPreview()
+            }
+            return
+          }
+        }
+        // fallback: if files present (some browsers)
+        const files = (ev.clipboardData && ev.clipboardData.files) || []
+        if(files.length){
+          ev.preventDefault()
+          const f = files[0]
+          if(f && f.type && f.type.indexOf('image')===0){
+            const dataUrl = await fileToDataUrl(f)
+            const start = editBody.selectionStart || editBody.value.length
+            const before = editBody.value.substring(0, start)
+            const after = editBody.value.substring(start)
+            editBody.value = before + "\n[[IMG:" + dataUrl + "]]\n" + after
+            refreshPreview()
+          }
+        }
+      }catch(e){
+        console.warn('paste image failed', e)
+      }
+    })
+
+    // Drag & drop support: drop image files onto the content area
+    contentEl.addEventListener('dragover', (e)=>{ e.preventDefault() })
+    contentEl.addEventListener('drop', async (e)=>{
+      e.preventDefault()
+      try{
+        const f = (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0])
+        if(f && f.type && f.type.indexOf('image')===0){
+          const dataUrl = await fileToDataUrl(f)
+          const start = editBody.selectionStart || editBody.value.length
+          const before = editBody.value.substring(0, start)
+          const after = editBody.value.substring(start)
+          editBody.value = before + "\n[[IMG:" + dataUrl + "]]\n" + after
+          refreshPreview()
+        }
+      }catch(err){
+        console.warn('drop image failed', err)
+      }
+    })
   }
 
   document.getElementById('cancel-note').addEventListener('click', ()=>{
