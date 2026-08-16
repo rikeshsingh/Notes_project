@@ -24,6 +24,66 @@ const data = {
 
 const STORAGE_KEY = 'notes_data_v1'
 
+let useFirestore = false
+let firestoreDb = null
+
+function setSyncStatus(status){
+  const el = document.getElementById('sync-status')
+  if(!el) return
+  el.className = 'sync-status ' + status
+  const dot = el.querySelector('.dot')
+  const label = el.querySelector('.label')
+  if(!dot || !label) return
+  if(status === 'connected'){
+    dot.className = 'dot connected'
+    label.textContent = 'Realtime: connected'
+  } else if(status === 'connecting'){
+    dot.className = 'dot connecting'
+    label.textContent = 'Realtime: connecting'
+  } else if(status === 'disconnected'){
+    dot.className = 'dot disconnected'
+    label.textContent = 'Realtime: disconnected'
+  } else {
+    dot.className = 'dot disabled'
+    label.textContent = 'Realtime: disabled'
+  }
+}
+
+function initFirestore(){
+  try{
+    if(window.FIREBASE_CONFIG && typeof firebase !== 'undefined'){
+      console.log('initFirestore: FIREBASE_CONFIG present, initializing')
+      setSyncStatus('connecting')
+      // initialize app if not already
+      if(!firebase.apps || !firebase.apps.length){
+        firebase.initializeApp(window.FIREBASE_CONFIG)
+      }
+      firestoreDb = firebase.firestore()
+      useFirestore = true
+      const docRef = firestoreDb.collection('notes').doc('data')
+      // real-time listener
+      docRef.onSnapshot(snap=>{
+        console.log('Firestore snapshot received', snap.exists)
+        setSyncStatus('connected')
+        const val = snap.exists ? snap.data().payload : null
+        if(val && typeof val === 'object'){
+          Object.keys(val).forEach(k=>{ data[k] = val[k] })
+          // persist locally as well
+          try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)) }catch(e){}
+          renderList(activeCategory)
+          updateCounts()
+          showNote(activeIndex)
+        }
+      }, err=>{
+        console.warn('Firestore listener failed', err)
+        setSyncStatus('disconnected')
+      })
+    }
+  }catch(e){
+    console.warn('Failed to init Firestore', e)
+  }
+}
+
 function loadData(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -37,12 +97,79 @@ function loadData(){
   }
 }
 
-function saveData(){
+// Try to load data from server; fallback to localStorage
+function fetchRemoteData(){
+  fetch('/api/notes').then(res=>{
+    if(!res.ok) throw new Error('Network response not ok')
+    return res.json()
+  }).then(remote=>{
+    if(remote && typeof remote === 'object'){
+      Object.keys(remote).forEach(k=>{ data[k] = remote[k] })
+      renderList(activeCategory)
+      updateCounts()
+      showNote(activeIndex)
+    }
+  }).catch(err=>{
+    // ignore - keep local data
+    console.warn('Remote load failed, using local data', err)
+    loadData()
+  })
+}
+
+async function saveData(){
+  // If Firestore is available, prefer to save there first so other clients get updates
+  if(useFirestore && firestoreDb){
+    try{
+      await saveToFirestore()
+      try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)) }catch(e){}
+      return
+    }catch(e){
+      console.warn('saveData: Firestore save failed, falling back', e)
+      // continue to fallback below
+    }
+  }
+
+  // Fallback: save locally and to simple server endpoint
   try{
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
   }catch(e){
-    console.warn('Failed saving notes', e)
+    console.warn('Failed saving notes locally', e)
   }
+
+  try{
+    fetch('/api/notes', {
+      method:'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(data)
+    }).then(res=>{
+      if(!res.ok) console.warn('Remote save returned non-ok', res.status)
+      return res.json().catch(()=>null)
+    }).catch(err=>{
+      console.warn('Failed saving remote notes', err)
+    })
+  }catch(e){
+    console.warn('saveData: fallback fetch failed', e)
+  }
+}
+
+// Save to Firestore when enabled (best-effort)
+function saveToFirestore(){
+  return new Promise((resolve, reject)=>{
+    if(!useFirestore || !firestoreDb) return reject(new Error('Firestore not available'))
+    try{
+      console.log('saveToFirestore: saving payload to Firestore')
+      const docRef = firestoreDb.collection('notes').doc('data')
+      docRef.set({payload: data}).then(()=>resolve()).catch(err=>{
+        console.warn('Failed writing to Firestore', err)
+        setSyncStatus('disconnected')
+        reject(err)
+      })
+    }catch(e){
+      console.warn('Firestore save error', e)
+      setSyncStatus('disconnected')
+      reject(e)
+    }
+  })
 }
 
 let activeCategory = 'SRE'
@@ -149,6 +276,31 @@ function populateCategorySelect(){
 // Search filter
 document.addEventListener('DOMContentLoaded', ()=>{
   loadData()
+  // ensure auth ready: if Firebase auth exists, wait for auth state check
+  try{
+    if(window.FIREBASE_CONFIG && typeof firebase !== 'undefined' && firebase.auth){
+      firebase.initializeApp && firebase.initializeApp(window.FIREBASE_CONFIG)
+      // when auth ready, enforce redirect to login if not signed in
+      firebase.auth().onAuthStateChanged(user=>{
+        if(!user){
+          // not signed in -> send to login
+          if(!location.pathname.endsWith('login.html')) location.replace('/login.html')
+        } else {
+          // signed in -> set user name and continue
+          const nameEl = document.getElementById('user-name')
+          if(nameEl) nameEl.textContent = user.displayName || user.email || 'User'
+          initFirestore()
+        }
+      })
+    } else {
+      initFirestore()
+    }
+  }catch(e){
+    console.warn('Auth/init check failed', e)
+    initFirestore()
+  }
+  // if Firestore not configured, fall back to server
+  if(!useFirestore) fetchRemoteData()
   initThemeToggle()
   initSidebar()
   populateCategorySelect()
@@ -170,6 +322,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
     activeIndex = 0
     enterEditMode(0, true)
     saveData()
+    saveToFirestore()
   })
   const editBtn = document.getElementById('edit-note-btn')
   if(editBtn){
@@ -218,6 +371,7 @@ function enterEditMode(idx, isNew=false){
     renderList(activeCategory)
     showNote(idx)
     saveData()
+    saveToFirestore()
   })
 
   document.getElementById('cancel-note').addEventListener('click', ()=>{
@@ -227,6 +381,7 @@ function enterEditMode(idx, isNew=false){
       renderList(activeCategory)
       showNote(0)
       saveData()
+      saveToFirestore()
     } else {
       showNote(idx)
     }

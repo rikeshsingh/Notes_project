@@ -11,7 +11,7 @@
     <aside class="sidebar">
       <div class="profile">
         <div class="avatar">RS</div>
-        <div class="profile-name">Rakesh Singh</div>
+        <div class="profile-name"><span id="user-name">Rakesh Singh</span></div>
       </div>
       <div class="sidebar-sections">
         <h4 class="sidebar-title">Categories</h4>
@@ -38,10 +38,15 @@
     <main class="note-content">
       <div class="content-header">
         <div class="tag-dot"></div>
+        <div id="sync-status" class="sync-status">
+          <span class="dot disabled"></span>
+          <span class="label">Realtime: disabled</span>
+        </div>
         <select id="category-select" class="category-select"></select>
-        <div style="margin-left:auto;display:flex;gap:8px" class="note-actions">
+        <div style="margin-left:auto;display:flex;gap:8px;align-items:center" class="note-actions">
           <button id="modify-note-btn" class="btn">Modify</button>
           <button id="delete-note-btn" class="btn secondary">Delete</button>
+          <button id="btn-signout" class="signout-btn light" title="Sign out" style="margin-left:8px;display:none">Sign out</button>
         </div>
       </div>
       <article class="note-article">
@@ -55,6 +60,11 @@
     <small>Use the buttons above to explore categories. Built with HTML/CSS/JS.</small>
   </footer>
 
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="firebase-auth.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
