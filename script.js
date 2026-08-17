@@ -1,31 +1,70 @@
-const data = {
-  Docker: [
-    {q:'What is a Docker image vs a container?', a:'An image is a read-only template; a container is a runtime instance of that image.'},
-    {q:'How do you reduce image size?', a:'Use smaller base images, multi-stage builds, remove build tools and cache, and minimize layers.'},
-    {q:'How do you persist data?', a:'Use volumes or bind mounts to keep data outside the container filesystem.'}
-  ],
-  Kubernetes: [
-    {q:'What is a Pod?', a:'The smallest deployable unit in Kubernetes, may contain one or more containers.'},
-    {q:'What is a Deployment?', a:'A higher-level API that manages ReplicaSets to provide declarative updates for Pods.'},
-    {q:'How do Services work?', a:'Services provide stable network endpoints; ClusterIP, NodePort, and LoadBalancer expose differently.'}
-  ],
-  Terraform: [
-    {q:'What is Terraform state?', a:'State is a snapshot mapping of real resources to your configuration; it enables planning and syncing.'},
-    {q:'How do you handle secrets?', a:'Do not store secrets in state or code; use secret backends (Vault) or provider-specific secret stores.'},
-    {q:'What are providers?', a:'Providers are plugins that let Terraform manage different APIs (AWS, Kubernetes, Docker, etc.).'}
-  ],
-  SRE: [
-    {q:'What is SRE?', a:'SRE is a discipline that applies software engineering principles to IT operations. The goal is to build scalable, highly available, reliable, and automated systems.'},
-    {q:'What is SLO, SLA, SLI?', a:'SLI is a metric, SLO is a target for that metric, SLA is an agreement often tied to penalties.'},
-    {q:'How do you approach incident response?', a:'Runbook-driven triage, prioritize impact, mitigate, post-incident review with blameless postmortem.'},
-    {q:'How do you measure reliability?', a:'Use availability, latency, error rates and saturation; define SLOs and monitor SLIs.'}
-  ]
-}
+// Data loaded dynamically from data.json
+let data = {}
 
 const STORAGE_KEY = 'notes_data_v1'
 
 let useFirestore = false
 let firestoreDb = null
+
+// Load data dynamically from data.json
+function loadDataFromJSON(){
+  return fetch('data.json')
+    .then(res=>{
+      if(!res.ok) throw new Error('Failed to load data.json')
+      return res.json()
+    })
+    .then(json=>{
+      // Merge loaded data with existing data
+      Object.keys(json).forEach(k=>{ data[k] = json[k] })
+      regenerateCategoryUI()
+      return data
+    })
+    .catch(err=>{
+      console.warn('Failed loading data.json, using defaults or localStorage', err)
+      return null
+    })
+}
+
+// Dynamically generate category buttons based on data
+function regenerateCategoryUI(){
+  const categoriesList = document.querySelector('.categories')
+  if(!categoriesList) return
+  
+  categoriesList.innerHTML = ''
+  const categories = Object.keys(data)
+  
+  // Set first category as active if none selected yet
+  if(!activeCategory || !data[activeCategory]){
+    activeCategory = categories[0] || 'General'
+  }
+  
+  categories.forEach(cat=>{
+    const li = document.createElement('li')
+    const btn = document.createElement('button')
+    btn.className = 'cat-btn'
+    if(cat === activeCategory) btn.classList.add('active')
+    btn.dataset.cat = cat
+    
+    const count = document.createElement('span')
+    count.className = 'count'
+    count.textContent = (data[cat] && data[cat].length) ? data[cat].length : 0
+    
+    btn.appendChild(document.createTextNode(cat + ' '))
+    btn.appendChild(count)
+    
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('active'))
+      btn.classList.add('active')
+      activeCategory = cat
+      renderList(cat)
+      showNote(0)
+      populateCategorySelect()
+    })
+    
+    li.appendChild(btn)
+    categoriesList.appendChild(li)
+  })
+}
 
 function setSyncStatus(status){
   const el = document.getElementById('sync-status')
@@ -172,7 +211,7 @@ function saveToFirestore(){
   })
 }
 
-let activeCategory = 'SRE'
+let activeCategory = null  // Will be set dynamically based on data.json
 let activeIndex = 0
 
 function initSidebar(){
@@ -319,7 +358,10 @@ function populateCategorySelect(){
 }
 
 // Search filter
-document.addEventListener('DOMContentLoaded', ()=>{
+document.addEventListener('DOMContentLoaded', async ()=>{
+  // Load data from data.json first
+  await loadDataFromJSON()
+  
   loadData()
   // ensure auth ready: if Firebase auth exists, wait for auth state check
   try{
@@ -347,7 +389,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   // if Firestore not configured, fall back to server
   if(!useFirestore) fetchRemoteData()
   initThemeToggle()
-  initSidebar()
+  // Category buttons are now created dynamically by regenerateCategoryUI()
   populateCategorySelect()
   renderList(activeCategory)
   showNote(0)
