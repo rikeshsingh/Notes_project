@@ -8,19 +8,21 @@ let firestoreDb = null
 
 // Load data dynamically from data.json
 function loadDataFromJSON(){
+  console.log('[Init] Loading data.json...')
   return fetch('data.json')
     .then(res=>{
       if(!res.ok) throw new Error('Failed to load data.json')
       return res.json()
     })
     .then(json=>{
+      console.log('[Init] Data loaded from JSON:', Object.keys(json))
       // Merge loaded data with existing data
       Object.keys(json).forEach(k=>{ data[k] = json[k] })
-      regenerateCategoryUI()
+      console.log('[Init] Data merged, keys now:', Object.keys(data))
       return data
     })
     .catch(err=>{
-      console.warn('Failed loading data.json, using defaults or localStorage', err)
+      console.error('[Init] Failed loading data.json:', err)
       return null
     })
 }
@@ -30,13 +32,18 @@ function regenerateCategoryUI(){
   const categoriesList = document.querySelector('.categories')
   if(!categoriesList) return
   
-  categoriesList.innerHTML = ''
   const categories = Object.keys(data)
+  if(categories.length === 0){
+    console.warn('No categories found in data')
+    return
+  }
   
   // Set first category as active if none selected yet
   if(!activeCategory || !data[activeCategory]){
-    activeCategory = categories[0] || 'General'
+    activeCategory = categories[0]
   }
+  
+  categoriesList.innerHTML = ''
   
   categories.forEach(cat=>{
     const li = document.createElement('li')
@@ -64,6 +71,8 @@ function regenerateCategoryUI(){
     li.appendChild(btn)
     categoriesList.appendChild(li)
   })
+  
+  console.log('Categories rendered:', categories, 'Active:', activeCategory)
 }
 
 function setSyncStatus(status){
@@ -340,15 +349,26 @@ function fileToDataUrl(file){
 
 function populateCategorySelect(){
   const sel = document.getElementById('category-select')
+  if(!sel) return
+  
   sel.innerHTML = ''
-  Object.keys(data).forEach(k=>{
+  const categories = Object.keys(data)
+  
+  categories.forEach(k=>{
     const opt = document.createElement('option')
-    opt.value = k; opt.textContent = k
+    opt.value = k
+    opt.textContent = k
     if(k===activeCategory) opt.selected = true
     sel.appendChild(opt)
   })
-  sel.addEventListener('change', ()=>{
-    activeCategory = sel.value
+  
+  // Remove old event listeners by cloning
+  const newSel = sel.cloneNode(true)
+  sel.parentNode.replaceChild(newSel, sel)
+  
+  // Add new listener
+  newSel.addEventListener('change', function(){
+    activeCategory = this.value
     document.querySelectorAll('.cat-btn').forEach(b=>{
       b.classList.toggle('active', b.dataset.cat===activeCategory)
     })
@@ -359,10 +379,21 @@ function populateCategorySelect(){
 
 // Search filter
 document.addEventListener('DOMContentLoaded', async ()=>{
+  console.log('[Init] DOMContentLoaded starting...')
+  
   // Load data from data.json first
   await loadDataFromJSON()
+  console.log('[Init] After loadDataFromJSON, data keys:', Object.keys(data))
   
+  // Merge with localStorage data (don't override)
   loadData()
+  console.log('[Init] After loadData, data keys:', Object.keys(data))
+  
+  // Now regenerate categories with fully loaded data
+  console.log('[Init] Regenerating category UI...')
+  regenerateCategoryUI()
+  console.log('[Init] After regenerateCategoryUI, activeCategory:', activeCategory)
+  
   // ensure auth ready: if Firebase auth exists, wait for auth state check
   try{
     if(window.FIREBASE_CONFIG && typeof firebase !== 'undefined' && firebase.auth){
@@ -389,10 +420,17 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   // if Firestore not configured, fall back to server
   if(!useFirestore) fetchRemoteData()
   initThemeToggle()
-  // Category buttons are now created dynamically by regenerateCategoryUI()
+  // Populate category select dropdown
   populateCategorySelect()
-  renderList(activeCategory)
-  showNote(0)
+  
+  // Render the active category
+  if(activeCategory && data[activeCategory]){
+    console.log('[Init] Rendering list for', activeCategory)
+    renderList(activeCategory)
+    showNote(0)
+  } else {
+    console.warn('[Init] No active category or data found')
+  }
   const search = document.getElementById('search')
   search.addEventListener('input', ()=>{
     const q = search.value.toLowerCase()
