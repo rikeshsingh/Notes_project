@@ -44,7 +44,8 @@ nav{display:flex;gap:8px;padding:12px 20px;background:transparent}
 .sync-status .dot.disabled{background:rgba(255,255,255,0.06)}
 .note-article{padding:6px}
 .note-article h2{margin:0 0 12px 0}
-.note-article #content{color:var(--muted);line-height:1.6}
+.note-article #content{color:var(--muted);line-height:1.6;white-space:pre-wrap}
+.note-embedded-img{display:block;max-width:100%;height:auto;margin:10px 0;border-radius:8px}
 /* Home hero and tiles (minimal) */
 .home-hero{max-width:980px;margin:24px auto;padding:28px 12px;border-radius:6px;background:transparent}
 .home-hero h2{margin-bottom:6px;font-size:20px}
@@ -159,8 +160,6 @@ footer{padding:12px 20px;color:var(--muted);font-size:13px}
 .btn-gradient{display:inline-block;width:100%;padding:12px;border-radius:30px;border:none;background:linear-gradient(90deg,#34d399,#60a5fa);color:white;font-weight:700;cursor:pointer;box-shadow:0 8px 20px rgba(45,130,255,0.18)}
 .social-row{display:flex;gap:12px;justify-content:center;margin-top:18px}
 .social-btn{width:44px;height:44px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:white;cursor:pointer}
-.social-btn.fb{background:#1877f2}
-.social-btn.tw{background:#1da1f2}
 .social-btn.gg{background:#ea4335}
 .social-label{display:block;text-align:center;margin-top:12px;color:#9ca3af;font-size:13px}
 .auth-footer{margin-top:18px;text-align:center;color:#9ca3af}

@@ -1,31 +1,79 @@
-const data = {
-  Docker: [
-    {q:'What is a Docker image vs a container?', a:'An image is a read-only template; a container is a runtime instance of that image.'},
-    {q:'How do you reduce image size?', a:'Use smaller base images, multi-stage builds, remove build tools and cache, and minimize layers.'},
-    {q:'How do you persist data?', a:'Use volumes or bind mounts to keep data outside the container filesystem.'}
-  ],
-  Kubernetes: [
-    {q:'What is a Pod?', a:'The smallest deployable unit in Kubernetes, may contain one or more containers.'},
-    {q:'What is a Deployment?', a:'A higher-level API that manages ReplicaSets to provide declarative updates for Pods.'},
-    {q:'How do Services work?', a:'Services provide stable network endpoints; ClusterIP, NodePort, and LoadBalancer expose differently.'}
-  ],
-  Terraform: [
-    {q:'What is Terraform state?', a:'State is a snapshot mapping of real resources to your configuration; it enables planning and syncing.'},
-    {q:'How do you handle secrets?', a:'Do not store secrets in state or code; use secret backends (Vault) or provider-specific secret stores.'},
-    {q:'What are providers?', a:'Providers are plugins that let Terraform manage different APIs (AWS, Kubernetes, Docker, etc.).'}
-  ],
-  SRE: [
-    {q:'What is SRE?', a:'SRE is a discipline that applies software engineering principles to IT operations. The goal is to build scalable, highly available, reliable, and automated systems.'},
-    {q:'What is SLO, SLA, SLI?', a:'SLI is a metric, SLO is a target for that metric, SLA is an agreement often tied to penalties.'},
-    {q:'How do you approach incident response?', a:'Runbook-driven triage, prioritize impact, mitigate, post-incident review with blameless postmortem.'},
-    {q:'How do you measure reliability?', a:'Use availability, latency, error rates and saturation; define SLOs and monitor SLIs.'}
-  ]
-}
+// Data loaded dynamically from data.json
+let data = {}
 
 const STORAGE_KEY = 'notes_data_v1'
 
 let useFirestore = false
 let firestoreDb = null
+
+// Load data dynamically from data.json
+function loadDataFromJSON(){
+  console.log('[Init] Loading data.json...')
+  return fetch('data.json')
+    .then(res=>{
+      if(!res.ok) throw new Error('Failed to load data.json')
+      return res.json()
+    })
+    .then(json=>{
+      console.log('[Init] Data loaded from JSON:', Object.keys(json))
+      // Merge loaded data with existing data
+      Object.keys(json).forEach(k=>{ data[k] = json[k] })
+      console.log('[Init] Data merged, keys now:', Object.keys(data))
+      return data
+    })
+    .catch(err=>{
+      console.error('[Init] Failed loading data.json:', err)
+      return null
+    })
+}
+
+// Dynamically generate category buttons based on data
+function regenerateCategoryUI(){
+  const categoriesList = document.querySelector('.categories')
+  if(!categoriesList) return
+  
+  const categories = Object.keys(data)
+  if(categories.length === 0){
+    console.warn('No categories found in data')
+    return
+  }
+  
+  // Set first category as active if none selected yet
+  if(!activeCategory || !data[activeCategory]){
+    activeCategory = categories[0]
+  }
+  
+  categoriesList.innerHTML = ''
+  
+  categories.forEach(cat=>{
+    const li = document.createElement('li')
+    const btn = document.createElement('button')
+    btn.className = 'cat-btn'
+    if(cat === activeCategory) btn.classList.add('active')
+    btn.dataset.cat = cat
+    
+    const count = document.createElement('span')
+    count.className = 'count'
+    count.textContent = (data[cat] && data[cat].length) ? data[cat].length : 0
+    
+    btn.appendChild(document.createTextNode(cat + ' '))
+    btn.appendChild(count)
+    
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('active'))
+      btn.classList.add('active')
+      activeCategory = cat
+      renderList(cat)
+      showNote(0)
+      populateCategorySelect()
+    })
+    
+    li.appendChild(btn)
+    categoriesList.appendChild(li)
+  })
+  
+  console.log('Categories rendered:', categories, 'Active:', activeCategory)
+}
 
 function setSyncStatus(status){
   const el = document.getElementById('sync-status')
@@ -172,7 +220,7 @@ function saveToFirestore(){
   })
 }
 
-let activeCategory = 'SRE'
+let activeCategory = null  // Will be set dynamically based on data.json
 let activeIndex = 0
 
 function initSidebar(){
@@ -247,24 +295,80 @@ function showNote(idx){
   const content = document.getElementById('content')
   if(note){
     title.textContent = note.q
-    content.textContent = note.a
+    // Render note content safely, preserving line breaks and embedded image tokens
+    renderContentToElement(note.a, content)
   } else {
     title.textContent = 'Select a note'
     content.textContent = 'Pick a note from the middle column to view the answer.'
   }
 }
 
+// Render text to an element, converting [[IMG:dataURL]] tokens to image elements
+function renderContentToElement(text, container){
+  container.innerHTML = ''
+  if(!text){ container.textContent = ''; return }
+  const tokenRe = /\[\[IMG:([^\]]+)\]\]/g
+  let lastIndex = 0
+  let m
+  while((m = tokenRe.exec(text)) !== null){
+    const before = text.substring(lastIndex, m.index)
+    appendTextWithLineBreaks(container, before)
+    const dataUrl = m[1]
+    try{
+      const img = document.createElement('img')
+      img.src = dataUrl
+      img.className = 'note-embedded-img'
+      container.appendChild(img)
+    }catch(e){
+      // ignore broken image
+    }
+    lastIndex = tokenRe.lastIndex
+  }
+  const rest = text.substring(lastIndex)
+  appendTextWithLineBreaks(container, rest)
+}
+
+function appendTextWithLineBreaks(container, text){
+  if(!text) return
+  const lines = text.split('\n')
+  lines.forEach((line, i)=>{
+    container.appendChild(document.createTextNode(line))
+    if(i < lines.length - 1) container.appendChild(document.createElement('br'))
+  })
+}
+
+// Convert a File/Blob to a Data URL
+function fileToDataUrl(file){
+  return new Promise((resolve, reject)=>{
+    const r = new FileReader()
+    r.onload = ()=>resolve(r.result)
+    r.onerror = (e)=>reject(e)
+    r.readAsDataURL(file)
+  })
+}
+
 function populateCategorySelect(){
   const sel = document.getElementById('category-select')
+  if(!sel) return
+  
   sel.innerHTML = ''
-  Object.keys(data).forEach(k=>{
+  const categories = Object.keys(data)
+  
+  categories.forEach(k=>{
     const opt = document.createElement('option')
-    opt.value = k; opt.textContent = k
+    opt.value = k
+    opt.textContent = k
     if(k===activeCategory) opt.selected = true
     sel.appendChild(opt)
   })
-  sel.addEventListener('change', ()=>{
-    activeCategory = sel.value
+  
+  // Remove old event listeners by cloning
+  const newSel = sel.cloneNode(true)
+  sel.parentNode.replaceChild(newSel, sel)
+  
+  // Add new listener
+  newSel.addEventListener('change', function(){
+    activeCategory = this.value
     document.querySelectorAll('.cat-btn').forEach(b=>{
       b.classList.toggle('active', b.dataset.cat===activeCategory)
     })
@@ -274,8 +378,22 @@ function populateCategorySelect(){
 }
 
 // Search filter
-document.addEventListener('DOMContentLoaded', ()=>{
+document.addEventListener('DOMContentLoaded', async ()=>{
+  console.log('[Init] DOMContentLoaded starting...')
+  
+  // Load data from data.json first
+  await loadDataFromJSON()
+  console.log('[Init] After loadDataFromJSON, data keys:', Object.keys(data))
+  
+  // Merge with localStorage data (don't override)
   loadData()
+  console.log('[Init] After loadData, data keys:', Object.keys(data))
+  
+  // Now regenerate categories with fully loaded data
+  console.log('[Init] Regenerating category UI...')
+  regenerateCategoryUI()
+  console.log('[Init] After regenerateCategoryUI, activeCategory:', activeCategory)
+  
   // ensure auth ready: if Firebase auth exists, wait for auth state check
   try{
     if(window.FIREBASE_CONFIG && typeof firebase !== 'undefined' && firebase.auth){
@@ -302,10 +420,17 @@ document.addEventListener('DOMContentLoaded', ()=>{
   // if Firestore not configured, fall back to server
   if(!useFirestore) fetchRemoteData()
   initThemeToggle()
-  initSidebar()
+  // Populate category select dropdown
   populateCategorySelect()
-  renderList(activeCategory)
-  showNote(0)
+  
+  // Render the active category
+  if(activeCategory && data[activeCategory]){
+    console.log('[Init] Rendering list for', activeCategory)
+    renderList(activeCategory)
+    showNote(0)
+  } else {
+    console.warn('[Init] No active category or data found')
+  }
   const search = document.getElementById('search')
   search.addEventListener('input', ()=>{
     const q = search.value.toLowerCase()
@@ -360,8 +485,13 @@ function enterEditMode(idx, isNew=false){
   const contentEl = document.getElementById('content')
   // Create editable inputs
   titleEl.innerHTML = `<input id="edit-title" value="${note ? escapeHtml(note.q) : ''}" style="width:100%;padding:8px;border-radius:6px;border:1px solid rgba(15,23,36,0.06);font-size:18px">`
-  contentEl.innerHTML = `<textarea id="edit-body" style="width:100%;height:280px;padding:10px;border-radius:6px;border:1px solid rgba(15,23,36,0.06);">${note ? escapeHtml(note.a) : ''}</textarea>
-    <div style="margin-top:10px;display:flex;gap:8px"><button id="save-note" class="btn">Save</button><button id="cancel-note" class="btn secondary">Cancel</button></div>`
+  contentEl.innerHTML = `<textarea id="edit-body" style="width:100%;height:220px;padding:10px;border-radius:6px;border:1px solid rgba(15,23,36,0.06);">${note ? escapeHtml(note.a) : ''}</textarea>
+    <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+      <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer"><input id="attach-image" type="file" accept="image/*" style="display:none">Attach Image</label>
+      <button id="save-note" class="btn">Save</button>
+      <button id="cancel-note" class="btn secondary">Cancel</button>
+    </div>
+    <div id="edit-image-preview" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"></div>`
 
   document.getElementById('save-note').addEventListener('click', ()=>{
     const newQ = document.getElementById('edit-title').value.trim() || 'Untitled'
@@ -373,6 +503,106 @@ function enterEditMode(idx, isNew=false){
     saveData()
     saveToFirestore()
   })
+
+  // Attach image handler: inserts token [[IMG:dataUrl]] into textarea and shows preview
+  const attachInput = document.getElementById('attach-image')
+  const editBody = document.getElementById('edit-body')
+  const preview = document.getElementById('edit-image-preview')
+  function refreshPreview(){
+    preview.innerHTML = ''
+    const tokenRe = /\[\[IMG:([^\]]+)\]\]/g
+    let m
+    while((m = tokenRe.exec(editBody.value)) !== null){
+      const img = document.createElement('img')
+      img.src = m[1]
+      img.style.maxWidth = '120px'
+      img.style.maxHeight = '90px'
+      img.style.objectFit = 'cover'
+      img.style.borderRadius = '6px'
+      preview.appendChild(img)
+    }
+  }
+  if(attachInput){
+    attachInput.addEventListener('change', (ev)=>{
+      const f = ev.target.files && ev.target.files[0]
+      if(!f) return
+      const reader = new FileReader()
+      reader.onload = function(e){
+        const dataUrl = e.target.result
+        // insert token at cursor position
+        const start = editBody.selectionStart || editBody.value.length
+        const before = editBody.value.substring(0, start)
+        const after = editBody.value.substring(start)
+        editBody.value = before + "\n[[IMG:" + dataUrl + "]]\n" + after
+        refreshPreview()
+      }
+      reader.readAsDataURL(f)
+      // reset input so same file can be attached again if needed
+      attachInput.value = ''
+    })
+    // refresh preview on load
+    refreshPreview()
+  }
+
+  // Paste handler: allow pasting images from clipboard into the textarea
+  if(editBody){
+    editBody.addEventListener('paste', async (ev)=>{
+      try{
+        const items = (ev.clipboardData && ev.clipboardData.items) || []
+        for(let i=0;i<items.length;i++){
+          const it = items[i]
+          if(it.type && it.type.indexOf('image') === 0){
+            ev.preventDefault()
+            const file = it.getAsFile()
+            if(file){
+              const dataUrl = await fileToDataUrl(file)
+              const start = editBody.selectionStart || editBody.value.length
+              const before = editBody.value.substring(0, start)
+              const after = editBody.value.substring(start)
+              editBody.value = before + "\n[[IMG:" + dataUrl + "]]\n" + after
+              refreshPreview()
+            }
+            return
+          }
+        }
+        // fallback: if files present (some browsers)
+        const files = (ev.clipboardData && ev.clipboardData.files) || []
+        if(files.length){
+          ev.preventDefault()
+          const f = files[0]
+          if(f && f.type && f.type.indexOf('image')===0){
+            const dataUrl = await fileToDataUrl(f)
+            const start = editBody.selectionStart || editBody.value.length
+            const before = editBody.value.substring(0, start)
+            const after = editBody.value.substring(start)
+            editBody.value = before + "\n[[IMG:" + dataUrl + "]]\n" + after
+            refreshPreview()
+          }
+        }
+      }catch(e){
+        console.warn('paste image failed', e)
+      }
+    })
+
+    // Drag & drop support: drop image files onto the content area
+    contentEl.addEventListener('dragover', (e)=>{ e.preventDefault() })
+    contentEl.addEventListener('drop', async (e)=>{
+      e.preventDefault()
+      try{
+        const f = (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0])
+        if(f && f.type && f.type.indexOf('image')===0){
+          const dataUrl = await fileToDataUrl(f)
+          const start = editBody.selectionStart || editBody.value.length
+          const before = editBody.value.substring(0, start)
+          const after = editBody.value.substring(start)
+          editBody.value = before + "\n[[IMG:" + dataUrl + "]]\n" + after
+          refreshPreview()
+        }
+      }catch(err){
+        console.warn('drop image failed', err)
+      }
+    })
+  }
 
   document.getElementById('cancel-note').addEventListener('click', ()=>{
     // If it was a new note and user cancels, remove it
