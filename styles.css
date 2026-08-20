@@ -6,8 +6,8 @@ header h1{margin:0;font-size:20px}
 header p{margin-top:6px;color:var(--muted);font-size:14px}
 nav{display:flex;gap:8px;padding:12px 20px;background:transparent}
 /* App three-column layout: sidebar | list | content */
-.app-grid{display:grid;grid-template-columns:260px 380px 1fr;gap:20px;max-width:1200px;margin:20px auto;padding:0 16px}
-.sidebar{background:linear-gradient(180deg,#2f7bff 0%,#2c5bff 100%);color:white;border-radius:12px;padding:22px;display:flex;flex-direction:column;justify-content:space-between}
+.app-grid{display:grid;grid-template-columns:260px 380px 1fr;gap:20px;max-width:1200px;padding:0 16px}
+.sidebar{background:linear-gradient(180deg,#2f7bff 0%,#2c5bff 100%);color:white;border-radius:12px;padding:22px;display:flex;flex-direction:column;justify-content:flex-start}
 .profile{display:flex;align-items:center;gap:12px;margin-bottom:18px}
 .avatar{width:44px;height:44px;border-radius:10px;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-weight:700}
 .profile-name{font-weight:700}
@@ -22,7 +22,7 @@ nav{display:flex;gap:8px;padding:12px 20px;background:transparent}
 .notes-list{background:var(--bg);border-radius:12px;padding:14px;border:1px solid rgba(15,23,36,0.04)}
 .list-header{display:flex;gap:12px;align-items:center;margin-bottom:12px}
 .list-header input{flex:1;padding:10px;border-radius:8px;border:1px solid rgba(15,23,36,0.06)}
-.list{display:flex;flex-direction:column;gap:10px;max-height:70vh;overflow:auto;padding-right:6px}
+.list{display:flex;flex-direction:column;gap:10px;max-height:100vh;overflow:auto;padding-right:6px}
 .list-item{background:var(--surface);padding:12px;border-radius:8px;border:1px solid rgba(15,23,36,0.04);cursor:pointer}
 .list-item{display:flex;justify-content:space-between;align-items:flex-start}
 .list-item .meta{flex:1;padding-right:12px}
